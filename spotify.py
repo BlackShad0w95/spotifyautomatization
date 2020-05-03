@@ -54,7 +54,7 @@ class CreatePlaylist:
     def get_liked_videos(self):
         request = self.youtube_client.videos().list(
             part="snippet, contentDetails, statistics",
-            maxResults=25,
+            maxResults=10,
             myRating="like"
         )
         response = request.execute()
@@ -73,15 +73,17 @@ class CreatePlaylist:
 
 #            if self.get_spotify_uri()
             if song_name is not None and artist is not None:
-                # save all important info and skip any missing song and artist
-                self.all_song_info[video_title] = {
-                    "youtube_url": youtube_url,
-                    "song_name": song_name,
-                    "artist": artist,
+                spotify_uri = self.get_spotify_uri(song_name, artist)
+                if spotify_uri is not None:
+                    self.all_song_info[video_title] = {
+                        "youtube_url": youtube_url,
+                        "song_name": song_name,
+                        "artist": artist,
 
-                    # add the uri, easy to get song to put into playlist
-                    "spotify_uri": self.get_spotify_uri(song_name, artist)
-                }
+                        # add the uri, easy to get song to put into playlist
+                        "spotify_uri": spotify_uri
+                    }
+
 
 # Step 3: Create a new playlist in Spotify
     def create_playlist(self):
@@ -123,13 +125,18 @@ class CreatePlaylist:
 
         # add verification for empty list
         songs = response_json["tracks"]["items"]
-        print(songs)
+        length = songs.__len__
 
-        # only use the first song
-        uri = songs[0]["uri"]
-        print(uri)
+        if songs:
+            print(songs)
 
-        return uri
+            # only use the first song
+            uri = songs[0]["uri"]
+            print(uri)
+
+            return uri
+        else:
+            print("List of uri is empty")
 
 # Step 5: Add this song to the spotify playlist
     def add_song_to_playlist(self):
@@ -140,7 +147,7 @@ class CreatePlaylist:
         # collect all of uri
         uris = []
         for song, uri in self.all_song_info.items():
-            uris.append(self.all_song_info["spotify_uri"])
+            uris.append(uri["spotify_uri"])
 
         # create a new list
         playlist_id = self.create_playlist()
@@ -159,11 +166,17 @@ class CreatePlaylist:
         )
 
         # check for valid response status
-        if response.status_code != 200:
-            raise ResponseException(response.status_code)
+        if response.status_code != (200 and 201):
+            raise Exception(response.status_code)
 
         response_json = response.json()
         return response_json
+
+    def preset_statistics(self):
+        pass
+
+    def present_most_likes(self):
+        pass
 
 
 if __name__ == '__main__':
